@@ -1,0 +1,38 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  BACKEND_IMAGE: todo-backend
+  FRONTEND_IMAGE: todo-frontend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t $BACKEND_IMAGE:${{ github.sha }} ./backend
+
+      - name: Build frontend image
+        run: docker build -t $FRONTEND_IMAGE:${{ github.sha }} ./frontend
+
+      - name: Login Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Tag backend
+        run: docker tag $BACKEND_IMAGE:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/todo-backend:${{ github.sha }}
+
+      - name: Tag frontend
+        run: docker tag $FRONTEND_IMAGE:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/todo-frontend:${{ github.sha }}
+
+      - name: Push backend
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/todo-backend:${{ github.sha }}
+
+      - name: Push frontend
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/todo-frontend:${{ github.sha }}

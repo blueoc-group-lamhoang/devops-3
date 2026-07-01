@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: todo_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - todo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: hiimhoanglam/todo-backend:v1
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: admin
+      DB_NAME: todo_db
+    networks:
+      - todo-network
+    ports:
+      - "8036:8036"
+    
+  frontend:
+    image: hiimhoanglam/todo-frontend:v1
+    networks:
+      - todo-network
+    ports:
+      - "8018:80"
+    environment:
+      BACKEND_HOST: backend
+
+  
+volumes:
+  pgdata:
+
+networks:
+  todo-network:

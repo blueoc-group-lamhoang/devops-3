@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f7fb;
+        margin: 0;
+        padding: 2rem;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        margin-top: 0;
+      }
+      form {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+      }
+      button {
+        padding: 0.75rem 1rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        background: #2563eb;
+        color: white;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.85rem 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .todo-left {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .done {
+        text-decoration: line-through;
+        color: #6b7280;
+      }
+      .actions button {
+        margin-left: 0.5rem;
+        padding: 0.45rem 0.7rem;
+      }
+      .actions .delete {
+        background: #dc2626;
+      }
+      .status {
+        margin-top: 1rem;
+        color: #4b5563;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Todo List</h1>
+      <form id="todo-form">
+        <input id="todo-input" type="text" placeholder="Nhập việc cần làm..." required />
+        <button type="submit">Thêm</button>
+      </form>
+      <ul id="todo-list"></ul>
+      <p class="status" id="status">Đang tải...</p>
+    </div>
+
+    <script>
+      const todoList = document.getElementById('todo-list');
+      const todoForm = document.getElementById('todo-form');
+      const todoInput = document.getElementById('todo-input');
+      const status = document.getElementById('status');
+
+      async function loadTodos() {
+        status.textContent = 'Đang tải...';
+        const response = await fetch('/api/todos');
+        const items = await response.json();
+        renderTodos(items);
+        status.textContent = items.length ? `${items.length} việc cần làm` : 'Chưa có việc nào';
+      }
+
+      function renderTodos(items) {
+        todoList.innerHTML = '';
+        if (!items.length) {
+          todoList.innerHTML = '<li>Không có mục nào.</li>';
+          return;
+        }
+
+        items.forEach((item) => {
+          const li = document.createElement('li');
+          const left = document.createElement('div');
+          left.className = 'todo-left';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = item.completed;
+          checkbox.addEventListener('change', () => toggleTodo(item.id, checkbox.checked));
+
+          const title = document.createElement('span');
+          title.textContent = item.title;
+          if (item.completed) title.classList.add('done');
+
+          left.appendChild(checkbox);
+          left.appendChild(title);
+
+          const actions = document.createElement('div');
+          actions.className = 'actions';
+
+          const deleteButton = document.createElement('button');
+          deleteButton.className = 'delete';
+          deleteButton.textContent = 'Xóa';
+          deleteButton.addEventListener('click', () => deleteTodo(item.id));
+
+          actions.appendChild(deleteButton);
+          li.appendChild(left);
+          li.appendChild(actions);
+          todoList.appendChild(li);
+        });
+      }
+
+      async function addTodo(event) {
+        event.preventDefault();
+        const title = todoInput.value.trim();
+        if (!title) return;
+
+        await fetch('/api/todos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title })
+        });
+
+        todoInput.value = '';
+        await loadTodos();
+      }
+
+      async function toggleTodo(id, completed) {
+        await fetch(`/api/todos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ completed })
+        });
+        await loadTodos();
+      }
+
+      async function deleteTodo(id) {
+        await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+        await loadTodos();
+      }
+
+      todoForm.addEventListener('submit', addTodo);
+      loadTodos();
+    </script>
+  </body>
+</html>
